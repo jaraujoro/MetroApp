@@ -1,6 +1,7 @@
 package com.metroapp.lima.ui.screens.topup
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,7 @@ fun TopUpScreen(
     val cards by viewModel.cards.collectAsState()
     val selectedCard by viewModel.selectedCard.collectAsState()
 
+    var showCardSelectionModal by remember { mutableStateOf(false) }
     var amountInput by remember { mutableStateOf("10.00") }
     var selectedMethod by remember { mutableStateOf("Efectivo") }
     var operationNumberInput by remember { mutableStateOf("") }
@@ -100,19 +102,81 @@ fun TopUpScreen(
                 color = Color.Gray
             )
 
+            // Dedicated Card Selector (Always asks/allows switching via modal)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCardSelectionModal = true },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(MetroGreenContainer, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.AddCard, contentDescription = null, tint = MetroGreenPrimary, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text("Tarjeta a recargar:", fontSize = 11.sp, color = Color.Gray)
+                            Text(
+                                text = selectedCard?.let { "${it.name} (${it.cardType.displayName})" } ?: "Seleccionar tarjeta...",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = { showCardSelectionModal = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = MetroGreenPrimary),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Cambiar", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
             // Balance Simulation Card
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCardSelectionModal = true },
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = MetroGreenContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Tarjeta: ${selectedCard?.name ?: "Mi Tarjeta"}",
-                        fontWeight = FontWeight.Bold,
-                        color = MetroOnGreenContainer,
-                        fontSize = 14.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Tarjeta: ${selectedCard?.name ?: "Mi Tarjeta"}",
+                            fontWeight = FontWeight.Bold,
+                            color = MetroOnGreenContainer,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "Toca para cambiar",
+                            fontSize = 11.sp,
+                            color = MetroGreenPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -251,5 +315,22 @@ fun TopUpScreen(
 
             Spacer(modifier = Modifier.height(60.dp))
         }
+    }
+
+    if (showCardSelectionModal) {
+        com.metroapp.lima.ui.components.CardSelectionModalDialog(
+            cards = cards,
+            selectedCardId = selectedCard?.id,
+            title = "Seleccionar Tarjeta a Recargar",
+            subtitle = "Elige a qué tarjeta deseas abonar la recarga:",
+            onCardSelected = { card ->
+                viewModel.selectCard(card.id)
+                showCardSelectionModal = false
+                scope.launch {
+                    snackbarHostState.showSnackbar("Tarjeta seleccionada: ${card.name}")
+                }
+            },
+            onDismissRequest = { showCardSelectionModal = false }
+        )
     }
 }

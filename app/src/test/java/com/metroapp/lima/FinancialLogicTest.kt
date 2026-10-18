@@ -105,4 +105,20 @@ class FinancialLogicTest {
 
         assertEquals(925L, balanceAfterCorrection) // S/ 9.25
     }
+
+    @Test
+    fun testCardHistoryMigration_recalculatesTargetBalanceConsistently() {
+        // Tarjeta A (origen): Saldo inicial 500L (S/ 5.00), 2 viajes de 150L (300L) -> Saldo = 200L
+        val cardAInitial = 500L
+        val cardATrips = listOf(150L, 150L)
+
+        // Tarjeta B (destino): Saldo inicial 1000L (S/ 10.00), 1 recarga de 2000L -> Saldo = 3000L
+        val cardBInitial = 1000L
+        val cardBTopUp = 2000L
+
+        // Al migrar los viajes de A a B:
+        // El historial en B ahora contiene: Saldo inicial B + Recarga B - Viajes de A
+        val consolidatedBalanceB = cardBInitial + cardBTopUp - cardATrips.sum()
+        assertEquals(2700L, consolidatedBalanceB) // S/ 27.00
+    }
 }

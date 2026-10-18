@@ -88,7 +88,7 @@ fun DashboardScreen(
 
     var showTripDialog by remember { mutableStateOf(false) }
     var showReconcileDialog by remember { mutableStateOf(false) }
-    var cardDropdownExpanded by remember { mutableStateOf(false) }
+    var showCardSelectionModal by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -118,7 +118,7 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Línea 1 del Metro",
                             style = MaterialTheme.typography.titleMedium,
@@ -126,36 +126,25 @@ fun DashboardScreen(
                             color = MetroGreenPrimary
                         )
                         Text(
-                            text = "Control de Saldo y Pasajes",
+                            text = "Tarjeta activa: ${selectedCard?.name ?: "Sin tarjeta"}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            color = Color.DarkGray,
+                            fontWeight = FontWeight.Medium
                         )
                     }
 
-                    Box {
-                        OutlinedButton(
-                            onClick = { cardDropdownExpanded = true },
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = selectedCard?.name ?: "Elegir Tarjeta", fontSize = 13.sp)
-                        }
-
-                        DropdownMenu(
-                            expanded = cardDropdownExpanded,
-                            onDismissRequest = { cardDropdownExpanded = false }
-                        ) {
-                            cards.forEach { card ->
-                                DropdownMenuItem(
-                                    text = { Text("${card.name} (${card.cardType.displayName})") },
-                                    onClick = {
-                                        viewModel.selectCard(card.id)
-                                        cardDropdownExpanded = false
-                                    }
-                                )
-                            }
-                        }
+                    Button(
+                        onClick = { showCardSelectionModal = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MetroGreenContainer,
+                            contentColor = MetroOnGreenContainer
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "Cambiar Tarjeta", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -173,7 +162,9 @@ fun DashboardScreen(
                             .padding(20.dp)
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showCardSelectionModal = true },
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -183,12 +174,21 @@ fun DashboardScreen(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = selectedCard?.cardType?.displayName ?: "Adulto",
-                                color = MetroGreenContainer,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${selectedCard?.name ?: "Tarjeta"} (${selectedCard?.cardType?.displayName ?: "Adulto"})",
+                                    color = MetroGreenContainer,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    Icons.Default.Sync,
+                                    contentDescription = "Cambiar Tarjeta",
+                                    tint = MetroGreenContainer,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -522,6 +522,24 @@ fun DashboardScreen(
                     Text("Cancelar")
                 }
             }
+        )
+    }
+
+    // Modal: Card Selection (Cambiar Tarjeta)
+    if (showCardSelectionModal) {
+        com.metroapp.lima.ui.components.CardSelectionModalDialog(
+            cards = cards,
+            selectedCardId = selectedCard?.id,
+            title = "Cambiar Tarjeta",
+            subtitle = "Selecciona la tarjeta que deseas utilizar en la pantalla principal:",
+            onCardSelected = { card ->
+                viewModel.selectCard(card.id)
+                showCardSelectionModal = false
+                scope.launch {
+                    snackbarHostState.showSnackbar("Tarjeta activa: ${card.name}")
+                }
+            },
+            onDismissRequest = { showCardSelectionModal = false }
         )
     }
 }

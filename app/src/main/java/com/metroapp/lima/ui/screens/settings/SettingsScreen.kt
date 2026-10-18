@@ -1,5 +1,7 @@
 package com.metroapp.lima.ui.screens.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -27,6 +31,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +82,8 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
 
     var showAddCardDialog by remember { mutableStateOf(false) }
+    var showEditCardDialog by remember { mutableStateOf<Card?>(null) }
+    var showDeleteCardDialog by remember { mutableStateOf<Pair<Card, Int>?>(null) }
     var showAddHolidayDialog by remember { mutableStateOf(false) }
     var showEditFareDialog by remember { mutableStateOf<FareRule?>(null) }
 
@@ -163,9 +171,47 @@ fun SettingsScreen(
                                     )
                                 }
 
-                                if (!card.isDefault) {
-                                    TextButton(onClick = { viewModel.setDefaultCard(card.id) }) {
-                                        Text("Predeterminada", fontSize = 11.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (!card.isDefault) {
+                                        TextButton(
+                                            onClick = { viewModel.setDefaultCard(card.id) },
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Predeterminada", fontSize = 11.sp)
+                                        }
+                                    }
+
+                                    // Edit Card Button
+                                    IconButton(
+                                        onClick = { showEditCardDialog = card },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Editar datos de tarjeta",
+                                            tint = MetroGreenPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    // Delete Card Button (with history migration)
+                                    if (cards.size > 1) {
+                                        IconButton(
+                                            onClick = {
+                                                scope.launch {
+                                                    val count = viewModel.getTransactionCountForCard(card.id)
+                                                    showDeleteCardDialog = card to count
+                                                }
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Eliminar tarjeta y trasladar historial",
+                                                tint = MetroRed,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -549,6 +595,242 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showEditFareDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Modal: Edit Card Data
+    showEditCardDialog?.let { card ->
+        var nameInput by remember { mutableStateOf(card.name) }
+        var typeInput by remember { mutableStateOf(card.cardType) }
+        var numberInput by remember { mutableStateOf(card.externalCardNumber ?: "") }
+        var notesInput by remember { mutableStateOf(card.notes ?: "") }
+        var isDefaultInput by remember { mutableStateOf(card.isDefault) }
+
+        AlertDialog(
+            onDismissRequest = { showEditCardDialog = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = MetroGreenPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Editar Datos de Tarjeta")
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = nameInput,
+                        onValueChange = { nameInput = it },
+                        label = { Text("Nombre de la tarjeta") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("Tipo de Tarjeta:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        CardType.entries.forEach { t ->
+                            FilterChip(
+                                selected = typeInput == t,
+                                onClick = { typeInput = t },
+                                label = { Text(t.displayName, fontSize = 10.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MetroGreenPrimary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = numberInput,
+                        onValueChange = { numberInput = it },
+                        label = { Text("Nº físico de la tarjeta (opcional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = notesInput,
+                        onValueChange = { notesInput = it },
+                        label = { Text("Notas u observaciones (opcional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Establecer como predeterminada", fontSize = 13.sp)
+                        Switch(
+                            checked = isDefaultInput,
+                            onCheckedChange = { isDefaultInput = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = MetroGreenPrimary)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (nameInput.isBlank()) {
+                            scope.launch { snackbarHostState.showSnackbar("El nombre de la tarjeta no puede estar vacío") }
+                            return@Button
+                        }
+                        val updated = card.copy(
+                            name = nameInput.trim(),
+                            cardType = typeInput,
+                            externalCardNumber = numberInput.trim().ifEmpty { null },
+                            notes = notesInput.trim().ifEmpty { null },
+                            isDefault = isDefaultInput,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                        viewModel.updateCard(updated) { success, msg ->
+                            showEditCardDialog = null
+                            scope.launch {
+                                snackbarHostState.showSnackbar(if (success) "Tarjeta actualizada exitosamente" else (msg ?: "Error"))
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MetroGreenPrimary)
+                ) {
+                    Text("Guardar Cambios")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditCardDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Modal: Delete Card with History Migration
+    showDeleteCardDialog?.let { (card, txCount) ->
+        val otherCards = cards.filter { it.id != card.id }
+        var selectedTargetCardId by remember { mutableStateOf(otherCards.firstOrNull()?.id) }
+
+        AlertDialog(
+            onDismissRequest = { showDeleteCardDialog = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MetroRed)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Eliminar Tarjeta: ${card.name}", color = MetroRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (txCount > 0) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "⚠️ Esta tarjeta tiene $txCount movimientos registrados (viajes, recargas o ajustes).",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF664D03)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Para no perder tu historial contable ni alterar tus reportes, todos sus movimientos serán trasladados a la tarjeta que elijas a continuación:",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF664D03)
+                                )
+                            }
+                        }
+
+                        if (otherCards.isEmpty()) {
+                            Text(
+                                text = "No tienes otra tarjeta registrada para trasladar los datos. Registra primero otra tarjeta antes de eliminar esta.",
+                                color = MetroRed,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Text("Selecciona la tarjeta destino para el traslado:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            otherCards.forEach { target ->
+                                val isChosen = target.id == selectedTargetCardId
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedTargetCardId = target.id },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isChosen) MetroGreenContainer else Color(0xFFF5F5F5)
+                                    ),
+                                    border = if (isChosen) BorderStroke(1.dp, MetroGreenPrimary) else null
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(target.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(target.cardType.displayName, fontSize = 11.sp, color = Color.Gray)
+                                        }
+                                        Text(
+                                            CurrencyUtils.formatCents(target.cachedBalanceCents),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isChosen) MetroGreenPrimary else Color.DarkGray
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Text("Esta tarjeta no tiene movimientos registrados. ¿Estás seguro de que deseas eliminarla?")
+                    }
+                }
+            },
+            confirmButton = {
+                val canProceed = txCount == 0 || (otherCards.isNotEmpty() && selectedTargetCardId != null)
+                Button(
+                    onClick = {
+                        val targetName = otherCards.firstOrNull { it.id == selectedTargetCardId }?.name ?: ""
+                        viewModel.deleteCardWithMigration(card.id, selectedTargetCardId) { success, msg ->
+                            showDeleteCardDialog = null
+                            scope.launch {
+                                if (success) {
+                                    val message = if (txCount > 0) {
+                                        "Tarjeta eliminada. Se trasladaron $txCount movimientos a $targetName"
+                                    } else {
+                                        "Tarjeta eliminada correctamente"
+                                    }
+                                    snackbarHostState.showSnackbar(message)
+                                } else {
+                                    snackbarHostState.showSnackbar(msg ?: "Error al eliminar tarjeta")
+                                }
+                            }
+                        }
+                    },
+                    enabled = canProceed,
+                    colors = ButtonDefaults.buttonColors(containerColor = MetroRed)
+                ) {
+                    Text(if (txCount > 0) "Trasladar y Eliminar" else "Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteCardDialog = null }) {
                     Text("Cancelar")
                 }
             }

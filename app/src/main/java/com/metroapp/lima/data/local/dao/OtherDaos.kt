@@ -83,6 +83,9 @@ interface ReconciliationDao {
 
     @Query("SELECT * FROM reconciliations ORDER BY timestamp DESC")
     fun getAllReconciliations(): Flow<List<ReconciliationEntity>>
+
+    @Query("UPDATE reconciliations SET cardId = :targetCardId WHERE cardId = :sourceCardId")
+    suspend fun migrateReconciliations(sourceCardId: Long, targetCardId: Long): Int
 }
 
 @Dao

@@ -58,4 +58,10 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE cardId = :cardId ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestTransactionForCard(cardId: Long): TransactionEntity?
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE cardId = :cardId")
+    suspend fun getTransactionCountForCard(cardId: Long): Int
+
+    @Query("UPDATE transactions SET cardId = :targetCardId, scheduledSlot = NULL WHERE cardId = :sourceCardId")
+    suspend fun migrateTransactions(sourceCardId: Long, targetCardId: Long): Int
 }

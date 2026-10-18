@@ -61,6 +61,49 @@ class MetroRepository(
         return id
     }
 
+    suspend fun updateCard(card: Card) {
+        val entity = CardEntity.fromDomain(card)
+        cardDao.updateCard(entity)
+        if (card.isDefault) {
+            cardDao.makeDefaultCard(card.id)
+        }
+        recalculateCardBalance(card.id)
+    }
+
+    suspend fun getTransactionCountForCard(cardId: Long): Int =
+        transactionDao.getTransactionCountForCard(cardId)
+
+    suspend fun deleteCardWithMigration(sourceCardId: Long, targetCardId: Long?): Result<Unit> {
+        return try {
+            database.withTransaction {
+                val sourceCard = cardDao.getCardById(sourceCardId) ?: return@withTransaction
+                val txCount = transactionDao.getTransactionCountForCard(sourceCardId)
+
+                if (txCount > 0) {
+                    if (targetCardId == null || targetCardId == sourceCardId) {
+                        throw IllegalArgumentException("Debes seleccionar una tarjeta de destino para migrar los movimientos.")
+                    }
+                    // Migrate transactions and reconciliations
+                    transactionDao.migrateTransactions(sourceCardId, targetCardId)
+                    reconciliationDao.migrateReconciliations(sourceCardId, targetCardId)
+                    // Recalculate target card balance from its newly consolidated history
+                    recalculateCardBalance(targetCardId)
+                }
+
+                // If deleted card was default, make targetCard default if available
+                if (sourceCard.isDefault && targetCardId != null) {
+                    cardDao.makeDefaultCard(targetCardId)
+                }
+
+                // Delete source card
+                cardDao.deleteCard(sourceCard)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun setDefaultCard(cardId: Long) {
         cardDao.makeDefaultCard(cardId)
     }

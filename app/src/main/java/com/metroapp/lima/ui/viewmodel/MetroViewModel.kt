@@ -218,6 +218,39 @@ class MetroViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateCard(card: Card, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.updateCard(card)
+                onResult(true, null)
+            } catch (e: Exception) {
+                onResult(false, e.message)
+            }
+        }
+    }
+
+    suspend fun getTransactionCountForCard(cardId: Long): Int {
+        return repository.getTransactionCountForCard(cardId)
+    }
+
+    fun deleteCardWithMigration(
+        sourceCardId: Long,
+        targetCardId: Long?,
+        onResult: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = repository.deleteCardWithMigration(sourceCardId, targetCardId)
+            if (result.isSuccess) {
+                if (_selectedCardId.value == sourceCardId) {
+                    _selectedCardId.value = targetCardId
+                }
+                onResult(true, null)
+            } else {
+                onResult(false, result.exceptionOrNull()?.message ?: "Error al eliminar tarjeta")
+            }
+        }
+    }
+
     fun deleteCard(card: Card) {
         viewModelScope.launch {
             repository.deleteCard(card)
