@@ -8,8 +8,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.metroapp.lima.ui.navigation.AppNavigation
+import com.metroapp.lima.ui.screens.splash.SplashScreen
 import com.metroapp.lima.ui.theme.MetroAppTheme
 import com.metroapp.lima.ui.viewmodel.MetroViewModel
 
@@ -45,7 +50,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MetroAppTheme {
-                AppNavigation(viewModel = viewModel)
+                var isSplashFinished by rememberSaveable {
+                    mutableStateOf(false)
+                }
+
+                if (!isSplashFinished) {
+                    SplashScreen(
+                        onSplashFinished = { isSplashFinished = true }
+                    )
+                } else {
+                    AppNavigation(viewModel = viewModel)
+                }
             }
         }
     }

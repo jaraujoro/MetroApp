@@ -95,6 +95,12 @@ class MetroRepository(
                     cardDao.makeDefaultCard(targetCardId)
                 }
 
+                // If automation config was using this card, reassign or reset to null
+                val autoConfig = automationDao.getConfig()
+                if (autoConfig != null && autoConfig.defaultCardId == sourceCardId) {
+                    automationDao.saveConfig(autoConfig.copy(defaultCardId = targetCardId))
+                }
+
                 // Delete source card
                 cardDao.deleteCard(sourceCard)
             }
@@ -501,4 +507,22 @@ class MetroRepository(
 
     suspend fun saveAutomationConfig(config: AutomationConfig) =
         automationDao.saveConfig(AutomationConfigEntity.fromDomain(config))
+
+    suspend fun resetAutomationConfig() {
+        automationDao.deleteConfig()
+        automationDao.saveConfig(
+            AutomationConfigEntity(
+                id = 1,
+                title = "Automatización de Viajes Diarios",
+                isEnabled = false,
+                autoConfirm = false,
+                morningTimeSlot = "07:30",
+                eveningTimeSlot = "18:00",
+                defaultCardId = null,
+                tripsPerDay = 2,
+                activeDays = "1,2,3,4,5",
+                customDates = ""
+            )
+        )
+    }
 }

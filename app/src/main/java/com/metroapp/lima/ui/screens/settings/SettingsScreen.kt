@@ -67,6 +67,7 @@ import com.metroapp.lima.domain.model.CardType
 import com.metroapp.lima.domain.model.FareRule
 import com.metroapp.lima.domain.model.Holiday
 import com.metroapp.lima.ui.theme.MetroGreenContainer
+import com.metroapp.lima.ui.theme.MetroGreenDark
 import com.metroapp.lima.ui.theme.MetroGreenPrimary
 import com.metroapp.lima.ui.theme.MetroRed
 import com.metroapp.lima.ui.viewmodel.MetroViewModel
@@ -92,6 +93,8 @@ fun SettingsScreen(
     var showEditFareDialog by remember { mutableStateOf<FareRule?>(null) }
     var showAddFareDialog by remember { mutableStateOf(false) }
     var showDeleteFareDialog by remember { mutableStateOf<FareRule?>(null) }
+    var showEditAutomationDialog by remember { mutableStateOf(false) }
+    var showDeleteAutomationDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -234,26 +237,49 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, tint = MetroGreenPrimary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Automatización de Viajes Diarios",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Schedule, contentDescription = null, tint = MetroGreenPrimary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = automationConfig.title.ifBlank { "Automatización de Viajes Diarios" },
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = if (automationConfig.isEnabled) "Estado: Activo" else "Estado: Desactivado",
+                                        fontSize = 11.sp,
+                                        color = if (automationConfig.isEnabled) MetroGreenPrimary else Color.Gray,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { showEditAutomationDialog = true }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Editar automatización", tint = MetroGreenPrimary, modifier = Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = { showDeleteAutomationDialog = true }) {
+                                    Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar / Reiniciar", tint = Color.Red, modifier = Modifier.size(20.dp))
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
+                        // Switch 1: Habilitar automatización
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Registrar 2 viajes automáticos diarios", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                Text("Genera los viajes en la mañana y en la tarde", fontSize = 11.sp, color = Color.Gray)
+                                Text("Habilitar automatización", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                Text("Ejecuta los viajes automáticos programados", fontSize = 11.sp, color = Color.Gray)
                             }
                             Switch(
                                 checked = automationConfig.isEnabled,
@@ -266,6 +292,7 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(6.dp))
 
+                        // Switch 2: Autoconfirmar viajes
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -286,6 +313,69 @@ fun SettingsScreen(
                                 },
                                 colors = SwitchDefaults.colors(checkedThumbColor = MetroGreenPrimary)
                             )
+                        }
+
+                        Divider(modifier = Modifier.padding(vertical = 10.dp), color = Color(0xFFEEEEEE))
+
+                        // Resumen de parámetros configurados
+                        val targetCardName = remember(cards, automationConfig.defaultCardId) {
+                            if (automationConfig.defaultCardId != null) {
+                                cards.firstOrNull { it.id == automationConfig.defaultCardId }?.let { "${it.name} (${it.cardTypeDisplayName})" } ?: "Tarjeta predeterminada"
+                            } else {
+                                cards.firstOrNull { it.isDefault }?.let { "${it.name} (${it.cardTypeDisplayName}) (Predeterminada)" } ?: "Tarjeta predeterminada"
+                            }
+                        }
+
+                        val daysLabels = mapOf(
+                            "1" to "Lun", "2" to "Mar", "3" to "Mié", "4" to "Jue", "5" to "Vie", "6" to "Sáb", "7" to "Dom"
+                        )
+                        val activeDaysSummary = remember(automationConfig.activeDays) {
+                            val activeList = automationConfig.activeDays.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                            if (activeList.size == 7) "Todos los días (Lun - Dom)"
+                            else if (activeList == listOf("1", "2", "3", "4", "5")) "Lunes a Viernes"
+                            else if (activeList.isEmpty()) "Ningún día de la semana"
+                            else activeList.mapNotNull { daysLabels[it] }.joinToString(", ")
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Tarjeta asignada:", fontSize = 12.sp, color = Color.Gray)
+                                Text(targetCardName, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MetroGreenDark)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Viajes por día:", fontSize = 12.sp, color = Color.Gray)
+                                Text("${automationConfig.tripsPerDay} viaje(s) diario(s)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Horarios configurados:", fontSize = 12.sp, color = Color.Gray)
+                                val slotText = if (automationConfig.tripsPerDay == 1) {
+                                    automationConfig.morningTimeSlot
+                                } else {
+                                    "${automationConfig.morningTimeSlot} (Mañana) • ${automationConfig.eveningTimeSlot} (Tarde)"
+                                }
+                                Text(slotText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Días activos:", fontSize = 12.sp, color = Color.Gray)
+                                Text(activeDaysSummary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            if (automationConfig.customDates.isNotBlank()) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Fechas específicas:", fontSize = 12.sp, color = Color.Gray)
+                                    Text(automationConfig.customDates, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MetroGreenPrimary)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { showEditAutomationDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MetroGreenPrimary)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Configurar Parámetros y Días", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -982,7 +1072,8 @@ fun SettingsScreen(
     // Modal: Delete Card with History Migration
     showDeleteCardDialog?.let { (card, txCount) ->
         val otherCards = cards.filter { it.id != card.id }
-        var selectedTargetCardId by remember { mutableStateOf(otherCards.firstOrNull()?.id) }
+        var selectedTargetCardId by remember(card.id) { mutableStateOf(otherCards.firstOrNull()?.id) }
+        var deleteDirectlyWithoutMigration by remember(card.id) { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showDeleteCardDialog = null },
@@ -1014,28 +1105,24 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Para no perder tu historial contable ni alterar tus reportes, todos sus movimientos serán trasladados a la tarjeta que elijas a continuación:",
+                                    text = "Puedes trasladar todo su historial a otra tarjeta para no perder tus reportes, o eliminarla directamente.",
                                     fontSize = 12.sp,
                                     color = Color(0xFF664D03)
                                 )
                             }
                         }
 
-                        if (otherCards.isEmpty()) {
-                            Text(
-                                text = "No tienes otra tarjeta registrada para trasladar los datos. Registra primero otra tarjeta antes de eliminar esta.",
-                                color = MetroRed,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
+                        if (otherCards.isNotEmpty()) {
                             Text("Selecciona la tarjeta destino para el traslado:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             otherCards.forEach { target ->
-                                val isChosen = target.id == selectedTargetCardId
+                                val isChosen = target.id == selectedTargetCardId && !deleteDirectlyWithoutMigration
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { selectedTargetCardId = target.id },
+                                        .clickable {
+                                            selectedTargetCardId = target.id
+                                            deleteDirectlyWithoutMigration = false
+                                        },
                                     shape = RoundedCornerShape(8.dp),
                                     colors = CardDefaults.cardColors(
                                         containerColor = if (isChosen) MetroGreenContainer else Color(0xFFF5F5F5)
@@ -1062,6 +1149,31 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { deleteDirectlyWithoutMigration = !deleteDirectlyWithoutMigration },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = deleteDirectlyWithoutMigration,
+                                    onCheckedChange = { deleteDirectlyWithoutMigration = it }
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Eliminar sin trasladar historial (borra sus movimientos)",
+                                    fontSize = 11.sp,
+                                    color = Color.DarkGray
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "¿Deseas eliminar definitivamente esta tarjeta y todos sus movimientos?",
+                                fontSize = 12.sp,
+                                color = Color.DarkGray
+                            )
                         }
                     } else {
                         Text("Esta tarjeta no tiene movimientos registrados. ¿Estás seguro de que deseas eliminarla?")
@@ -1069,15 +1181,16 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                val canProceed = txCount == 0 || (otherCards.isNotEmpty() && selectedTargetCardId != null)
+                val canProceed = txCount == 0 || otherCards.isEmpty() || deleteDirectlyWithoutMigration || (otherCards.isNotEmpty() && selectedTargetCardId != null)
                 Button(
                     onClick = {
-                        val targetName = otherCards.firstOrNull { it.id == selectedTargetCardId }?.name ?: ""
-                        viewModel.deleteCardWithMigration(card.id, selectedTargetCardId) { success, msg ->
+                        val destinationId = if (deleteDirectlyWithoutMigration || otherCards.isEmpty()) null else selectedTargetCardId
+                        val targetName = otherCards.firstOrNull { it.id == destinationId }?.name ?: ""
+                        viewModel.deleteCardWithMigration(card.id, destinationId) { success, msg ->
                             showDeleteCardDialog = null
                             scope.launch {
                                 if (success) {
-                                    val message = if (txCount > 0) {
+                                    val message = if (destinationId != null && txCount > 0) {
                                         "Tarjeta eliminada. Se trasladaron $txCount movimientos a $targetName"
                                     } else {
                                         "Tarjeta eliminada correctamente"
@@ -1092,11 +1205,319 @@ fun SettingsScreen(
                     enabled = canProceed,
                     colors = ButtonDefaults.buttonColors(containerColor = MetroRed)
                 ) {
-                    Text(if (txCount > 0) "Trasladar y Eliminar" else "Eliminar")
+                    val label = if (txCount > 0 && !deleteDirectlyWithoutMigration && otherCards.isNotEmpty()) {
+                        "Trasladar y Eliminar"
+                    } else {
+                        "Eliminar"
+                    }
+                    Text(label, color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteCardDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Modal: Edit Automation Config (Full CRUD)
+    if (showEditAutomationDialog) {
+        var titleInput by remember { mutableStateOf(automationConfig.title) }
+        var morningTimeInput by remember { mutableStateOf(automationConfig.morningTimeSlot) }
+        var eveningTimeInput by remember { mutableStateOf(automationConfig.eveningTimeSlot) }
+        var selectedCardId by remember { mutableStateOf(automationConfig.defaultCardId) }
+        var tripsPerDayInput by remember { mutableStateOf(automationConfig.tripsPerDay) }
+        var activeDaysSet by remember {
+            val list = automationConfig.activeDays.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            mutableStateOf(list.toSet())
+        }
+        var customDatesInput by remember { mutableStateOf(automationConfig.customDates) }
+
+        val dayOptions = listOf(
+            "1" to "Lun",
+            "2" to "Mar",
+            "3" to "Mié",
+            "4" to "Jue",
+            "5" to "Vie",
+            "6" to "Sáb",
+            "7" to "Dom"
+        )
+
+        AlertDialog(
+            onDismissRequest = { showEditAutomationDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Schedule, contentDescription = null, tint = MetroGreenPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Configurar Automatización")
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // 1. Título
+                    OutlinedTextField(
+                        value = titleInput,
+                        onValueChange = { titleInput = it },
+                        label = { Text("Título de la Automatización") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    // 2. Tarjeta a cargar
+                    Text("Tarjeta a la que se aplicará el viaje:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Opción: Usar tarjeta predeterminada
+                        FilterChip(
+                            selected = selectedCardId == null,
+                            onClick = { selectedCardId = null },
+                            label = { Text("Predeterminada", fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MetroGreenPrimary,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                        cards.forEach { c ->
+                            FilterChip(
+                                selected = selectedCardId == c.id,
+                                onClick = { selectedCardId = c.id },
+                                label = { Text("${c.name} (${c.cardTypeDisplayName})", fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MetroGreenPrimary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+
+                    // 3. Cantidad de viajes por día
+                    Text("Cantidad de viajes por día:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(1 to "1 viaje al día", 2 to "2 viajes al día").forEach { (count, label) ->
+                            FilterChip(
+                                selected = tripsPerDayInput == count,
+                                onClick = { tripsPerDayInput = count },
+                                label = { Text(label, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MetroGreenPrimary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                        // Opción personalizada para 3, 4, 5 o más viajes
+                        val isCustomSelected = tripsPerDayInput > 2
+                        FilterChip(
+                            selected = isCustomSelected,
+                            onClick = {
+                                if (!isCustomSelected) tripsPerDayInput = 3
+                            },
+                            label = { Text("Personalizado", fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MetroGreenPrimary,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+
+                    if (tripsPerDayInput > 2) {
+                        OutlinedTextField(
+                            value = if (tripsPerDayInput > 0) tripsPerDayInput.toString() else "",
+                            onValueChange = { newVal ->
+                                val filtered = newVal.filter { it.isDigit() }
+                                tripsPerDayInput = filtered.toIntOrNull()?.coerceIn(1, 20) ?: 1
+                            },
+                            label = { Text("Número de viajes por día (ej. 3, 4, 5)") },
+                            placeholder = { Text("3") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            )
+                        )
+                    }
+
+                    // 4. Horarios
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = morningTimeInput,
+                            onValueChange = { morningTimeInput = it },
+                            label = {
+                                Text(
+                                    when (tripsPerDayInput) {
+                                        1 -> "Hora del viaje"
+                                        2 -> "Hora Mañana"
+                                        else -> "Primer Horario"
+                                    }
+                                )
+                            },
+                            placeholder = { Text("07:30") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        if (tripsPerDayInput >= 2) {
+                            OutlinedTextField(
+                                value = eveningTimeInput,
+                                onValueChange = { eveningTimeInput = it },
+                                label = {
+                                    Text(
+                                        if (tripsPerDayInput == 2) "Hora Tarde" else "Segundo Horario"
+                                    )
+                                },
+                                placeholder = { Text("18:00") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                        }
+                    }
+
+                    // 5. Calendario: Días de la semana activos
+                    Text("Días de la semana para aplicar viajes:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        dayOptions.forEach { (key, label) ->
+                            val isSelected = activeDaysSet.contains(key)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    activeDaysSet = if (isSelected) activeDaysSet - key else activeDaysSet + key
+                                },
+                                label = { Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MetroGreenPrimary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+
+                    // Atajos rápidos para días
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TextButton(
+                            onClick = { activeDaysSet = setOf("1", "2", "3", "4", "5") },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("Lun a Vie", fontSize = 10.sp)
+                        }
+                        TextButton(
+                            onClick = { activeDaysSet = setOf("1", "2", "3", "4", "5", "6", "7") },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("Todos", fontSize = 10.sp)
+                        }
+                        TextButton(
+                            onClick = { activeDaysSet = emptySet() },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("Ninguno", fontSize = 10.sp)
+                        }
+                    }
+
+                    // 6. Fechas específicas (Calendario por fechas opcional)
+                    OutlinedTextField(
+                        value = customDatesInput,
+                        onValueChange = { customDatesInput = it },
+                        label = { Text("Fechas específicas (YYYY-MM-DD)") },
+                        placeholder = { Text("2026-10-20, 2026-10-21") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        "Opcional: Si escribes fechas específicas separadas por comas, los viajes automáticos se generarán exclusivamente en esas fechas.",
+                        fontSize = 10.sp,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val updated = automationConfig.copy(
+                            title = titleInput.trim().ifBlank { "Automatización de Viajes Diarios" },
+                            morningTimeSlot = morningTimeInput.trim().ifBlank { "07:30" },
+                            eveningTimeSlot = eveningTimeInput.trim().ifBlank { "18:00" },
+                            defaultCardId = selectedCardId,
+                            tripsPerDay = tripsPerDayInput,
+                            activeDays = activeDaysSet.sorted().joinToString(","),
+                            customDates = customDatesInput.trim()
+                        )
+                        viewModel.saveAutomationConfig(updated)
+                        showEditAutomationDialog = false
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Automatización guardada exitosamente")
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MetroGreenPrimary)
+                ) {
+                    Text("Guardar Cambios")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditAutomationDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Modal: Delete / Reset Automation Config
+    if (showDeleteAutomationDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAutomationDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Eliminar / Reiniciar Automatización", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        "¿Deseas eliminar la configuración actual de automatización de viajes diarios y restablecerla a los valores de fábrica?",
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Esto desactivará los viajes automáticos, cancelará las tareas de WorkManager y restablecerá los horarios y días por defecto.",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resetAutomationConfig()
+                        showDeleteAutomationDialog = false
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Automatización restablecida a valores por defecto")
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Eliminar / Restablecer", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAutomationDialog = false }) {
                     Text("Cancelar")
                 }
             }

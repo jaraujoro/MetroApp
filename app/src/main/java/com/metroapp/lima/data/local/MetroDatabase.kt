@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
         ReconciliationEntity::class,
         AutomationConfigEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class MetroDatabase : RoomDatabase() {
@@ -152,12 +152,15 @@ abstract class MetroDatabase : RoomDatabase() {
                 database.automationConfigDao().saveConfig(
                     AutomationConfigEntity(
                         id = 1,
+                        title = "Automatización de Viajes Diarios",
                         isEnabled = false,
                         autoConfirm = false,
                         morningTimeSlot = "07:30",
                         eveningTimeSlot = "18:00",
                         defaultCardId = null,
-                        tripsPerDay = 2
+                        tripsPerDay = 2,
+                        activeDays = "1,2,3,4,5",
+                        customDates = ""
                     )
                 )
 

@@ -120,7 +120,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Línea 1 del Metro",
+                            text = "Metro - Línea 1",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MetroGreenPrimary

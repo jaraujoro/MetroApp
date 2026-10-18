@@ -33,18 +33,41 @@ class DailyTripWorker(
             return Result.success()
         }
 
+        val nowLima = LocalDateTime.now(DateUtils.LIMA_ZONE)
+        val todayIso = DateUtils.formatIsoDate(DateUtils.toEpochMillis(nowLima))
+
+        // Check active days of week (1=Monday ... 7=Sunday) and custom dates
+        val dayOfWeekValue = nowLima.dayOfWeek.value // 1..7
+        val activeDayList = config.activeDays.split(",").mapNotNull { it.trim().toIntOrNull() }
+        val customDateList = config.customDates.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+        val isDayActive = if (customDateList.isNotEmpty()) {
+            customDateList.contains(todayIso) || activeDayList.contains(dayOfWeekValue)
+        } else if (activeDayList.isNotEmpty()) {
+            activeDayList.contains(dayOfWeekValue)
+        } else {
+            true
+        }
+
+        if (!isDayActive) {
+            return Result.success() // Hoy no está programado viaje automático
+        }
+
         val card = if (config.defaultCardId != null) {
             repository.getCardById(config.defaultCardId)
         } else {
             repository.getDefaultCard()
         } ?: return Result.success()
 
-        val nowLima = LocalDateTime.now(DateUtils.LIMA_ZONE)
-        val todayIso = DateUtils.formatIsoDate(DateUtils.toEpochMillis(nowLima))
-
-        // Determine current slot (morning or evening) based on current hour
+        // Determine current slot (morning or evening) based on current hour and tripsPerDay
         val currentHour = nowLima.hour
         val slot = if (currentHour < 14) "MORNING" else "EVENING"
+
+        // If only 1 trip per day is configured, only run on morning slot (or first slot)
+        if (config.tripsPerDay == 1 && slot == "EVENING") {
+            return Result.success()
+        }
+
         val scheduledSlotKey = "${card.id}_${todayIso}_$slot"
 
         // Check if already created or existing for this slot

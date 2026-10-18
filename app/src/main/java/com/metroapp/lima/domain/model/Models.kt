@@ -94,10 +94,13 @@ data class Reconciliation(
 
 data class AutomationConfig(
     val id: Long = 1,
+    val title: String = "Automatización de Viajes Diarios",
     val isEnabled: Boolean = false,
     val autoConfirm: Boolean = false,
     val morningTimeSlot: String = "07:30",
     val eveningTimeSlot: String = "18:00",
     val defaultCardId: Long? = null,
-    val tripsPerDay: Int = 2
+    val tripsPerDay: Int = 2,
+    val activeDays: String = "1,2,3,4,5", // Lunes a Viernes por defecto (1=Lunes, ..., 7=Domingo)
+    val customDates: String = "" // Fechas específicas separadas por comas "YYYY-MM-DD,YYYY-MM-DD"
 )

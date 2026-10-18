@@ -162,32 +162,41 @@ data class ReconciliationEntity(
 data class AutomationConfigEntity(
     @PrimaryKey
     val id: Long = 1,
+    val title: String = "Automatización de Viajes Diarios",
     val isEnabled: Boolean = false,
     val autoConfirm: Boolean = false,
     val morningTimeSlot: String = "07:30",
     val eveningTimeSlot: String = "18:00",
     val defaultCardId: Long? = null,
-    val tripsPerDay: Int = 2
+    val tripsPerDay: Int = 2,
+    val activeDays: String = "1,2,3,4,5",
+    val customDates: String = ""
 ) {
     fun toDomain(): AutomationConfig = AutomationConfig(
         id = id,
+        title = title,
         isEnabled = isEnabled,
         autoConfirm = autoConfirm,
         morningTimeSlot = morningTimeSlot,
         eveningTimeSlot = eveningTimeSlot,
         defaultCardId = defaultCardId,
-        tripsPerDay = tripsPerDay
+        tripsPerDay = tripsPerDay,
+        activeDays = activeDays,
+        customDates = customDates
     )
 
     companion object {
         fun fromDomain(config: AutomationConfig): AutomationConfigEntity = AutomationConfigEntity(
             id = config.id,
+            title = config.title,
             isEnabled = config.isEnabled,
             autoConfirm = config.autoConfirm,
             morningTimeSlot = config.morningTimeSlot,
             eveningTimeSlot = config.eveningTimeSlot,
             defaultCardId = config.defaultCardId,
-            tripsPerDay = config.tripsPerDay
+            tripsPerDay = config.tripsPerDay,
+            activeDays = config.activeDays,
+            customDates = config.customDates
         )
     }
 }

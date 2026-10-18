@@ -304,6 +304,13 @@ class MetroViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun resetAutomationConfig() {
+        viewModelScope.launch {
+            repository.resetAutomationConfig()
+            AutomationScheduler.scheduleDailyWork(getApplication(), false)
+        }
+    }
+
     fun exportCsv(): File {
         val cardsMap = cards.value.associateBy { it.id }
         return exportUseCase.exportToCsv(transactions.value, cardsMap)

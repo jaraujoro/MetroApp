@@ -107,4 +107,7 @@ interface AutomationConfigDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveConfig(config: AutomationConfigEntity)
+
+    @Query("DELETE FROM automation_config WHERE id = 1")
+    suspend fun deleteConfig()
 }

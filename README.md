@@ -1,6 +1,6 @@
-# MetroApp: Control de Saldo, Pasajes y Gastos (Línea 1 del Metro de Lima)
+# Metro - Línea 1: Control de Saldo, Pasajes y Gastos
 
-Aplicación móvil Android nativa desarrollada en **Kotlin** con **Jetpack Compose (Material 3)**, **Room (SQLite)** y **WorkManager**, diseñada para administrar tarjetas de transporte, registrar viajes, recargas y conciliaciones de saldo, aplicar tarifas automáticas y generar reportes financieros con exportación a **CSV** y **PDF**, con funcionamiento **100% offline-first**.
+Aplicación móvil Android nativa desarrollada en **Kotlin** con **Jetpack Compose (Material 3)**, **Room (SQLite)** y **WorkManager**, diseñada para la red del Metro de Lima (Línea 1). Administra tarjetas de transporte, registra viajes, recargas y conciliaciones de saldo, aplica tarifas automáticas inteligentes y genera reportes financieros con exportación a **CSV** y **PDF**, con funcionamiento **100% offline-first**. Incorpora un **Screen Load (Splash animado)** con identidad visual oficial.
 
 ---
 
@@ -29,12 +29,14 @@ Aplicación móvil Android nativa desarrollada en **Kotlin** con **Jetpack Compo
    - Calendario editable de feriados peruanos (añadir o eliminar fechas festivas).
    - Guardado inmutable de la tarifa aplicada en cada transacción histórica.
 
-4. **Automatización Inteligente (WorkManager)**:
-   - Programación en segundo plano de dos viajes diarios (mañana y tarde).
-   - Prevención de duplicados mediante clave idempotente (`cardId_YYYYMMDD_slot`).
-   - Movimientos generados como **PENDIENTES** por defecto (sin alterar el saldo hasta su confirmación).
-   - Opción de autoconfirmación configurable.
-   - Notificaciones interactivas para confirmar o descartar.
+4. **Automatización Inteligente de Viajes Diarios (CRUD Completo y Calendario)**:
+   - **Gestión Total Editable**: Título personalizable, activación/desactivación general y modo de autoconfirmación (descontar directo o dejar como pendiente).
+   - **Horarios Configurables**: Ajuste independiente de la hora de viaje matutino (ej. `07:30`) y vespertino (ej. `18:00`).
+   - **Cantidad de Viajes Diarios Personalizable**: Opciones predefinidas de 1 o 2 viajes al día, además de una opción **Personalizada** que permite al usuario definir libremente cualquier cantidad de viajes diarios (3, 4, 5, etc.) según su rutina.
+   - **Asignación Dinámica de Tarjeta**: Selector para elegir explícitamente a qué tarjeta registrada cargar los viajes automáticos o utilizar la predeterminada.
+   - **Calendario y Selección de Días**: Selector de días de la semana activos (*Lun, Mar, Mié, Jue, Vie, Sáb, Dom*) y soporte para fechas específicas (`YYYY-MM-DD`). Solo genera viajes en los días seleccionados.
+   - **Eliminación / Restablecimiento**: Opción para eliminar la configuración y restablecerla a valores de fábrica, cancelando las tareas en curso de WorkManager.
+   - Prevención de duplicados mediante clave idempotente (`cardId_YYYYMMDD_slot`) y notificaciones interactivas.
 
 5. **Conciliación de Saldo Físico**:
    - Comparación del saldo calculado contra el saldo real verificado en los torniquetes o estaciones.
