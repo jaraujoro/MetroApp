@@ -54,7 +54,7 @@ class DailyTripWorker(
         }
 
         // Calculate fare for this card and date
-        val fareResult = repository.calculateFare(card.cardType.name, nowLima)
+        val fareResult = repository.calculateFare(card.cardType, nowLima)
         val status = if (config.autoConfirm) TransactionStatus.CONFIRMED else TransactionStatus.PENDING
 
         val txResult = repository.registerTrip(

@@ -453,7 +453,7 @@ class MetroRepository(
         val holiday = holidayDao.getHolidayByDate(dateIso)?.toDomain()
         val rule = fareRuleDao.getFareRuleByCardType(cardTypeStr)?.toDomain()
         return TariffEngine.calculateFare(
-            cardType = com.metroapp.lima.domain.model.CardType.fromString(cardTypeStr),
+            cardType = cardTypeStr,
             dateTime = dateTime,
             holiday = holiday,
             fareRule = rule
@@ -463,8 +463,22 @@ class MetroRepository(
     fun getAllFareRules(): Flow<List<FareRule>> =
         fareRuleDao.getAllFareRules().map { list -> list.map { it.toDomain() } }
 
+    suspend fun saveFareRule(rule: FareRule): Long {
+        return fareRuleDao.insertOrUpdate(FareRuleEntity.fromDomain(rule))
+    }
+
     suspend fun updateFareRule(rule: FareRule) {
         fareRuleDao.insertOrUpdate(FareRuleEntity.fromDomain(rule))
+    }
+
+    suspend fun deleteFareRule(rule: FareRule): Result<Unit> {
+        val cards = cardDao.getAllCardsList()
+        val inUse = cards.any { it.cardType.equals(rule.cardType, ignoreCase = true) }
+        if (inUse) {
+            return Result.failure(IllegalStateException("No se puede eliminar la tarifa '${rule.displayName}' porque está asignada a una o más tarjetas registradas. Cambie la tarifa de dichas tarjetas primero."))
+        }
+        fareRuleDao.deleteFareRule(FareRuleEntity.fromDomain(rule))
+        return Result.success(Unit)
     }
 
     fun getAllHolidays(): Flow<List<Holiday>> =

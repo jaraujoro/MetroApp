@@ -15,6 +15,9 @@ abstract class CardDao {
     @Query("SELECT * FROM cards ORDER BY isDefault DESC, createdAt DESC")
     abstract fun getAllCards(): Flow<List<CardEntity>>
 
+    @Query("SELECT * FROM cards")
+    abstract suspend fun getAllCardsList(): List<CardEntity>
+
     @Query("SELECT * FROM cards WHERE isActive = 1 ORDER BY isDefault DESC, createdAt DESC")
     abstract fun getActiveCards(): Flow<List<CardEntity>>
 

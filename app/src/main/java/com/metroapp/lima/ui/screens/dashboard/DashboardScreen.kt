@@ -176,7 +176,7 @@ fun DashboardScreen(
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "${selectedCard?.name ?: "Tarjeta"} (${selectedCard?.cardType?.displayName ?: "Adulto"})",
+                                    text = "${selectedCard?.name ?: "Tarjeta"} (${selectedCard?.cardTypeDisplayName ?: "Adulto"})",
                                     color = MetroGreenContainer,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -419,7 +419,7 @@ fun DashboardScreen(
             text = {
                 Column {
                     Text("Tarjeta: ${currentCard?.name ?: "Predeterminada"}")
-                    Text("Tipo: ${currentCard?.cardType?.displayName ?: "Adulto"}")
+                    Text("Tipo: ${currentCard?.cardTypeDisplayName ?: "Adulto"}")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "La tarifa se calcula automáticamente según las reglas de la Línea 1, fecha y feriados.",

@@ -25,7 +25,7 @@ data class CardEntity(
     fun toDomain(): Card = Card(
         id = id,
         name = name,
-        cardType = CardType.fromString(cardType),
+        cardType = cardType,
         externalCardNumber = externalCardNumber,
         initialBalanceCents = initialBalanceCents,
         cachedBalanceCents = cachedBalanceCents,
@@ -42,7 +42,7 @@ data class CardEntity(
         fun fromDomain(card: Card): CardEntity = CardEntity(
             id = card.id,
             name = card.name,
-            cardType = card.cardType.name,
+            cardType = card.cardType,
             externalCardNumber = card.externalCardNumber,
             initialBalanceCents = card.initialBalanceCents,
             cachedBalanceCents = card.cachedBalanceCents,

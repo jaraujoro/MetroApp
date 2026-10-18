@@ -3,7 +3,7 @@ package com.metroapp.lima.domain.model
 data class Card(
     val id: Long = 0,
     val name: String,
-    val cardType: CardType,
+    val cardType: String,
     val externalCardNumber: String? = null,
     val initialBalanceCents: Long = 0,
     val cachedBalanceCents: Long = 0,
@@ -14,7 +14,15 @@ data class Card(
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
-)
+) {
+    val cardTypeDisplayName: String
+        get() = when (cardType.uppercase()) {
+            "ADULT" -> "Adulto"
+            "SCHOOL" -> "Escolar"
+            "UNIVERSITY" -> "Universitario / Instituto"
+            else -> cardType
+        }
+}
 
 data class MetroTransaction(
     val id: Long = 0,
@@ -46,14 +54,22 @@ data class Holiday(
 
 data class FareRule(
     val id: Long = 0,
-    val cardType: CardType,
+    val cardType: String,
     val weekdayFareCents: Long,
     val saturdayFareCents: Long,
     val sundayFareCents: Long,
     val holidayFareCents: Long,
     val validityStartMonthDay: String? = null, // "MM-DD", e.g., "02-15"
     val validityEndMonthDay: String? = null   // "MM-DD", e.g., "12-31"
-)
+) {
+    val displayName: String
+        get() = when (cardType.uppercase()) {
+            "ADULT" -> "Adulto"
+            "SCHOOL" -> "Escolar"
+            "UNIVERSITY" -> "Universitario / Instituto"
+            else -> cardType
+        }
+}
 
 data class AuditLog(
     val id: Long = 0,

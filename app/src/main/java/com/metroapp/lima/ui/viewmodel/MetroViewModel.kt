@@ -263,6 +263,28 @@ class MetroViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun saveFareRule(rule: FareRule, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.saveFareRule(rule)
+                onResult(true, null)
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Error al guardar regla de tarifa")
+            }
+        }
+    }
+
+    fun deleteFareRule(rule: FareRule, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.deleteFareRule(rule)
+            if (result.isSuccess) {
+                onResult(true, null)
+            } else {
+                onResult(false, result.exceptionOrNull()?.message ?: "Error al eliminar tarifa")
+            }
+        }
+    }
+
     fun addHoliday(dateIso: String, name: String) {
         viewModelScope.launch {
             repository.addHoliday(Holiday(dateIso = dateIso, name = name, isCustom = true))

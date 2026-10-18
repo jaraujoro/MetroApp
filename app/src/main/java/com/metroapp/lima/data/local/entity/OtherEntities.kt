@@ -58,7 +58,7 @@ data class FareRuleEntity(
 ) {
     fun toDomain(): FareRule = FareRule(
         id = id,
-        cardType = CardType.fromString(cardType),
+        cardType = cardType,
         weekdayFareCents = weekdayFareCents,
         saturdayFareCents = saturdayFareCents,
         sundayFareCents = sundayFareCents,
@@ -70,7 +70,7 @@ data class FareRuleEntity(
     companion object {
         fun fromDomain(rule: FareRule): FareRuleEntity = FareRuleEntity(
             id = rule.id,
-            cardType = rule.cardType.name,
+            cardType = rule.cardType,
             weekdayFareCents = rule.weekdayFareCents,
             saturdayFareCents = rule.saturdayFareCents,
             sundayFareCents = rule.sundayFareCents,

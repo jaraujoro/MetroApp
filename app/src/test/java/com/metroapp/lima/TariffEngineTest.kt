@@ -120,4 +120,19 @@ class TariffEngineTest {
         assertFalse(result.isHalfFareApplied)
         assertTrue(result.explanation.contains("Combate de Angamos"))
     }
+
+    @Test
+    fun customFareRule_appliedCorrectly() {
+        val customRule = com.metroapp.lima.domain.model.FareRule(
+            cardType = "VIP_TRANSIT",
+            weekdayFareCents = 100L,
+            saturdayFareCents = 120L,
+            sundayFareCents = 150L,
+            holidayFareCents = 180L
+        )
+        val wednesday = LocalDateTime.of(2026, 10, 21, 10, 0)
+        val result = TariffEngine.calculateFare("VIP_TRANSIT", wednesday, null, customRule)
+        assertEquals(100L, result.fareCents)
+        assertTrue(result.explanation.contains("VIP_TRANSIT"))
+    }
 }

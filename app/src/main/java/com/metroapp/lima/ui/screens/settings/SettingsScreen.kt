@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -23,8 +24,11 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PriceChange
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -86,6 +90,8 @@ fun SettingsScreen(
     var showDeleteCardDialog by remember { mutableStateOf<Pair<Card, Int>?>(null) }
     var showAddHolidayDialog by remember { mutableStateOf(false) }
     var showEditFareDialog by remember { mutableStateOf<FareRule?>(null) }
+    var showAddFareDialog by remember { mutableStateOf(false) }
+    var showDeleteFareDialog by remember { mutableStateOf<FareRule?>(null) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -165,7 +171,7 @@ fun SettingsScreen(
                                         }
                                     }
                                     Text(
-                                        text = "${card.cardType.displayName} • Saldo: ${CurrencyUtils.formatCents(card.cachedBalanceCents)}",
+                                        text = "${card.cardTypeDisplayName} • Saldo: ${CurrencyUtils.formatCents(card.cachedBalanceCents)}",
                                         fontSize = 12.sp,
                                         color = Color.Gray
                                     )
@@ -293,13 +299,26 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.PriceChange, contentDescription = null, tint = MetroGreenPrimary)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Tarifario de Referencia (${fareRules.size})",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
+                            TextButton(onClick = { showAddFareDialog = true }) {
+                                Text("+ Añadir", color = MetroGreenPrimary, fontSize = 12.sp)
+                            }
+                        }
                         Text(
-                            text = "Tarifario de Referencia",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = "Valores editables. No alteran transacciones históricas previas.",
+                            text = "Valores editables. Añade, modifica o elimina tarifas según tus necesidades.",
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
@@ -315,15 +334,33 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(rule.cardType.displayName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(rule.displayName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     Text(
-                                        "L-V: ${CurrencyUtils.formatCents(rule.weekdayFareCents)} | Sáb: ${CurrencyUtils.formatCents(rule.saturdayFareCents)} | Dom/Fer: ${CurrencyUtils.formatCents(rule.sundayFareCents)}",
+                                        "L-V: ${CurrencyUtils.formatCents(rule.weekdayFareCents)} | Sáb: ${CurrencyUtils.formatCents(rule.saturdayFareCents)} | Dom: ${CurrencyUtils.formatCents(rule.sundayFareCents)} | Fer: ${CurrencyUtils.formatCents(rule.holidayFareCents)}",
                                         fontSize = 11.sp,
                                         color = Color.DarkGray
                                     )
+                                    if (!rule.validityStartMonthDay.isNullOrBlank() && !rule.validityEndMonthDay.isNullOrBlank()) {
+                                        Text(
+                                            "Vigencia: ${rule.validityStartMonthDay} al ${rule.validityEndMonthDay}",
+                                            fontSize = 10.sp,
+                                            color = MetroGreenPrimary
+                                        )
+                                    }
                                 }
-                                IconButton(onClick = { showEditFareDialog = rule }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(18.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { showEditFareDialog = rule },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MetroGreenPrimary, modifier = Modifier.size(18.dp))
+                                    }
+                                    IconButton(
+                                        onClick = { showDeleteFareDialog = rule },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar", tint = Color.Red, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             }
                         }
@@ -412,7 +449,20 @@ fun SettingsScreen(
     // Modal: Add Card
     if (showAddCardDialog) {
         var cardNameInput by remember { mutableStateOf("") }
-        var selectedCardType by remember { mutableStateOf(CardType.ADULT) }
+        val availableTypes = remember(fareRules) {
+            if (fareRules.isNotEmpty()) {
+                fareRules.map { it.cardType to it.displayName }
+            } else {
+                listOf(
+                    "ADULT" to "Adulto",
+                    "SCHOOL" to "Escolar",
+                    "UNIVERSITY" to "Universitario / Instituto"
+                )
+            }
+        }
+        var selectedCardType by remember {
+            mutableStateOf(availableTypes.firstOrNull()?.first ?: "ADULT")
+        }
         var initialBalanceInput by remember { mutableStateOf("0.00") }
         var cardNumInput by remember { mutableStateOf("") }
 
@@ -420,7 +470,12 @@ fun SettingsScreen(
             onDismissRequest = { showAddCardDialog = false },
             title = { Text("Registrar Nueva Tarjeta") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = cardNameInput,
                         onValueChange = { cardNameInput = it },
@@ -428,17 +483,23 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text("Tipo de Tarjeta:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        CardType.entries.forEach { type ->
-                            TextButton(
-                                onClick = { selectedCardType = type },
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = if (selectedCardType == type) MetroGreenPrimary else Color.Gray
+                    Text("Tipo / Tarifa de la Tarjeta:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        availableTypes.forEach { (typeKey, typeLabel) ->
+                            FilterChip(
+                                selected = selectedCardType.equals(typeKey, ignoreCase = true),
+                                onClick = { selectedCardType = typeKey },
+                                label = { Text(typeLabel, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MetroGreenPrimary,
+                                    selectedLabelColor = Color.White
                                 )
-                            ) {
-                                Text(type.displayName, fontSize = 11.sp, fontWeight = if (selectedCardType == type) FontWeight.Bold else FontWeight.Normal)
-                            }
+                            )
                         }
                     }
 
@@ -549,12 +610,20 @@ fun SettingsScreen(
         var weekdayInput by remember { mutableStateOf((rule.weekdayFareCents / 100.0).toString()) }
         var saturdayInput by remember { mutableStateOf((rule.saturdayFareCents / 100.0).toString()) }
         var sundayInput by remember { mutableStateOf((rule.sundayFareCents / 100.0).toString()) }
+        var holidayInput by remember { mutableStateOf((rule.holidayFareCents / 100.0).toString()) }
+        var validityStartInput by remember { mutableStateOf(rule.validityStartMonthDay ?: "") }
+        var validityEndInput by remember { mutableStateOf(rule.validityEndMonthDay ?: "") }
 
         AlertDialog(
             onDismissRequest = { showEditFareDialog = null },
-            title = { Text("Editar Tarifas: ${rule.cardType.displayName}") },
+            title = { Text("Editar Tarifa: ${rule.displayName}") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = weekdayInput,
                         onValueChange = { weekdayInput = it },
@@ -570,7 +639,25 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = sundayInput,
                         onValueChange = { sundayInput = it },
-                        label = { Text("Domingo y Feriados (S/)") },
+                        label = { Text("Domingo (S/)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = holidayInput,
+                        onValueChange = { holidayInput = it },
+                        label = { Text("Feriados (S/)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = validityStartInput,
+                        onValueChange = { validityStartInput = it },
+                        label = { Text("Vigencia Inicio (MM-DD, opcional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = validityEndInput,
+                        onValueChange = { validityEndInput = it },
+                        label = { Text("Vigencia Fin (MM-DD, opcional)") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -582,11 +669,13 @@ fun SettingsScreen(
                             weekdayFareCents = CurrencyUtils.parseSolesToCents(weekdayInput),
                             saturdayFareCents = CurrencyUtils.parseSolesToCents(saturdayInput),
                             sundayFareCents = CurrencyUtils.parseSolesToCents(sundayInput),
-                            holidayFareCents = CurrencyUtils.parseSolesToCents(sundayInput)
+                            holidayFareCents = CurrencyUtils.parseSolesToCents(holidayInput),
+                            validityStartMonthDay = validityStartInput.ifBlank { null },
+                            validityEndMonthDay = validityEndInput.ifBlank { null }
                         )
                         viewModel.updateFareRule(updated)
                         showEditFareDialog = null
-                        scope.launch { snackbarHostState.showSnackbar("Tarifa actualizada") }
+                        scope.launch { snackbarHostState.showSnackbar("Tarifa '${rule.displayName}' actualizada") }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MetroGreenPrimary)
                 ) {
@@ -601,6 +690,164 @@ fun SettingsScreen(
         )
     }
 
+    // Modal: Add Fare Rule
+    if (showAddFareDialog) {
+        var cardTypeInput by remember { mutableStateOf("") }
+        var weekdayInput by remember { mutableStateOf("1.50") }
+        var saturdayInput by remember { mutableStateOf("1.50") }
+        var sundayInput by remember { mutableStateOf("1.50") }
+        var holidayInput by remember { mutableStateOf("1.50") }
+        var validityStartInput by remember { mutableStateOf("") }
+        var validityEndInput by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddFareDialog = false },
+            title = { Text("Añadir Nueva Tarifa") },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = cardTypeInput,
+                        onValueChange = { cardTypeInput = it },
+                        label = { Text("Nombre de la Tarifa (ej. Tarifa Preferencial)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = weekdayInput,
+                        onValueChange = { weekdayInput = it },
+                        label = { Text("Lunes a Viernes (S/)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = saturdayInput,
+                        onValueChange = { saturdayInput = it },
+                        label = { Text("Sábado (S/)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = sundayInput,
+                        onValueChange = { sundayInput = it },
+                        label = { Text("Domingo (S/)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = holidayInput,
+                        onValueChange = { holidayInput = it },
+                        label = { Text("Feriados (S/)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = validityStartInput,
+                        onValueChange = { validityStartInput = it },
+                        label = { Text("Vigencia Inicio (MM-DD, opcional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = validityEndInput,
+                        onValueChange = { validityEndInput = it },
+                        label = { Text("Vigencia Fin (MM-DD, opcional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmedType = cardTypeInput.trim()
+                        if (trimmedType.isBlank()) {
+                            scope.launch { snackbarHostState.showSnackbar("Ingresa un nombre para la tarifa") }
+                            return@Button
+                        }
+                        if (fareRules.any { it.cardType.equals(trimmedType, ignoreCase = true) }) {
+                            scope.launch { snackbarHostState.showSnackbar("Ya existe una tarifa con ese nombre") }
+                            return@Button
+                        }
+                        val newRule = FareRule(
+                            cardType = trimmedType,
+                            weekdayFareCents = CurrencyUtils.parseSolesToCents(weekdayInput),
+                            saturdayFareCents = CurrencyUtils.parseSolesToCents(saturdayInput),
+                            sundayFareCents = CurrencyUtils.parseSolesToCents(sundayInput),
+                            holidayFareCents = CurrencyUtils.parseSolesToCents(holidayInput),
+                            validityStartMonthDay = validityStartInput.ifBlank { null },
+                            validityEndMonthDay = validityEndInput.ifBlank { null }
+                        )
+                        viewModel.saveFareRule(newRule) { success, msg ->
+                            if (success) {
+                                showAddFareDialog = false
+                                scope.launch { snackbarHostState.showSnackbar("Tarifa añadida exitosamente") }
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar(msg ?: "Error al guardar tarifa") }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MetroGreenPrimary)
+                ) {
+                    Text("Guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddFareDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Modal: Delete Fare Rule Confirmation
+    showDeleteFareDialog?.let { rule ->
+        AlertDialog(
+            onDismissRequest = { showDeleteFareDialog = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Eliminar Tarifa", color = Color.Red, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        "¿Estás seguro de que deseas eliminar la tarifa '${rule.displayName}'?",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Nota: Si alguna de tus tarjetas tiene asignada esta tarifa, primero deberás cambiarle de tarifa para poder eliminarla.",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val ruleToDelete = rule
+                        viewModel.deleteFareRule(ruleToDelete) { success, msg ->
+                            showDeleteFareDialog = null
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    if (success) "Tarifa eliminada" else (msg ?: "Error al eliminar tarifa")
+                                )
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Eliminar", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteFareDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     // Modal: Edit Card Data
     showEditCardDialog?.let { card ->
         var nameInput by remember { mutableStateOf(card.name) }
@@ -608,6 +855,23 @@ fun SettingsScreen(
         var numberInput by remember { mutableStateOf(card.externalCardNumber ?: "") }
         var notesInput by remember { mutableStateOf(card.notes ?: "") }
         var isDefaultInput by remember { mutableStateOf(card.isDefault) }
+
+        val availableTypes = remember(fareRules, card.cardType) {
+            val list = mutableListOf<Pair<String, String>>()
+            fareRules.forEach { list.add(it.cardType to it.displayName) }
+            if (list.none { it.first.equals(card.cardType, ignoreCase = true) }) {
+                list.add(card.cardType to card.cardTypeDisplayName)
+            }
+            if (list.isEmpty()) {
+                listOf(
+                    "ADULT" to "Adulto",
+                    "SCHOOL" to "Escolar",
+                    "UNIVERSITY" to "Universitario / Instituto"
+                )
+            } else {
+                list
+            }
+        }
 
         AlertDialog(
             onDismissRequest = { showEditCardDialog = null },
@@ -632,16 +896,18 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text("Tipo de Tarjeta:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Tipo / Tarifa de la Tarjeta:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        CardType.entries.forEach { t ->
+                        availableTypes.forEach { (typeKey, typeLabel) ->
                             FilterChip(
-                                selected = typeInput == t,
-                                onClick = { typeInput = t },
-                                label = { Text(t.displayName, fontSize = 10.sp) },
+                                selected = typeInput.equals(typeKey, ignoreCase = true),
+                                onClick = { typeInput = typeKey },
+                                label = { Text(typeLabel, fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MetroGreenPrimary,
                                     selectedLabelColor = Color.White
@@ -785,7 +1051,7 @@ fun SettingsScreen(
                                     ) {
                                         Column {
                                             Text(target.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                            Text(target.cardType.displayName, fontSize = 11.sp, color = Color.Gray)
+                                            Text(target.cardTypeDisplayName, fontSize = 11.sp, color = Color.Gray)
                                         }
                                         Text(
                                             CurrencyUtils.formatCents(target.cachedBalanceCents),

@@ -113,7 +113,7 @@ fun CardSelectionModalDialog(
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = card.cardType.displayName,
+                                        text = card.cardTypeDisplayName,
                                         fontSize = 11.sp,
                                         color = Color.DarkGray
                                     )

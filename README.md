@@ -14,15 +14,18 @@ Aplicación móvil Android nativa desarrollada en **Kotlin** con **Jetpack Compo
    - Acceso directo para registrar viajes, recargar y conciliar.
    - Banner interactivo de viajes programados pendientes.
 
-2. **Gestión Multitarjeta**:
-   - Soporte para tarjetas de tipo **Adulto**, **Escolar** y **Universitario/Instituto**.
+2. **Gestión Multitarjeta y Selección Rápida**:
+   - Soporte para tarjetas con tarifas asignables dinámicamente (**Adulto**, **Escolar**, **Universitario** y cualquier tarifa personalizada creada por el usuario).
+   - Selector rápido mediante ventana modal desde el **Menú Principal (Dashboard)** y desde la sección de **Recargas**, sin necesidad de navegar hasta configuración.
    - Saldo inicial configurable, identificación opcional de número físico y notas.
-   - Selección de tarjeta predeterminada.
+   - Selección de tarjeta predeterminada y eliminación de tarjeta con migración segura de historial de viajes/movimientos hacia otra tarjeta activa.
 
-3. **Motor de Tarifas y Calendario Peruano**:
+3. **Motor de Tarifas y Tarifario de Referencia Administrable (CRUD Completo)**:
+   - **Gestión Total en Ajustes**: Permite **añadir nuevas tarifas**, **editar** tarifas existentes (L-V, sábados, domingos, feriados y periodos de vigencia opcionales) y **eliminar** tarifas que ya no se usen (con validación de integridad referencial si están asignadas a tarjetas).
+   - **Vinculación Dinámica**: Las tarifas creadas en el tarifario aparecen automáticamente como opciones seleccionables al registrar o editar cualquier tarjeta.
    - Cálculo automático de tarifas según tipo de tarjeta, fecha y hora en zona horaria `America/Lima`.
-   - Soporte de medio pasaje de lunes a viernes para escolares (con periodo de vigencia configurable) y de lunes a sábado para universitarios.
-   - Detección de domingos y feriados nacionales peruanos (los feriados anulan el medio pasaje aplicando tarifa completa de S/ 1.50).
+   - Soporte de medio pasaje de lunes a viernes para escolares (con periodo de vigencia configurable) y de lunes a sábado para universitarios o perfiles especiales.
+   - Detección de domingos y feriados nacionales peruanos (los feriados anulan el medio pasaje aplicando tarifa de feriado configurada).
    - Calendario editable de feriados peruanos (añadir o eliminar fechas festivas).
    - Guardado inmutable de la tarifa aplicada en cada transacción histórica.
 

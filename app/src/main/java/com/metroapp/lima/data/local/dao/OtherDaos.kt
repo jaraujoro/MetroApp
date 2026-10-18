@@ -59,6 +59,15 @@ interface FareRuleDao {
 
     @Update
     suspend fun updateFareRule(rule: FareRuleEntity)
+
+    @Delete
+    suspend fun deleteFareRule(rule: FareRuleEntity): Int
+
+    @Query("DELETE FROM fare_rules WHERE id = :id")
+    suspend fun deleteFareRuleById(id: Long): Int
+
+    @Query("DELETE FROM fare_rules WHERE cardType = :cardType")
+    suspend fun deleteFareRuleByType(cardType: String): Int
 }
 
 @Dao

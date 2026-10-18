@@ -131,7 +131,7 @@ fun TopUpScreen(
                         Column {
                             Text("Tarjeta a recargar:", fontSize = 11.sp, color = Color.Gray)
                             Text(
-                                text = selectedCard?.let { "${it.name} (${it.cardType.displayName})" } ?: "Seleccionar tarjeta...",
+                                text = selectedCard?.let { "${it.name} (${it.cardTypeDisplayName})" } ?: "Seleccionar tarjeta...",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface
